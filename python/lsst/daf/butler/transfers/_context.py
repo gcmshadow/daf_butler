@@ -81,6 +81,18 @@ class RepoExportContext:
         self._dataset_ids = set()
         self._datasets: Dict[Tuple[DatasetType, str], List[FileDataset]] = defaultdict(list)
 
+    def saveDimensionData(self, records: Iterable[DimensionRecord]) -> None:
+        """Export the given dimension records associated with one or more data
+        IDs.
+
+        Parameters
+        ----------
+        records : `Iterable` [ `DimensionRecord` ]
+            Records to export.
+        """
+        for record in records:
+            self._records[record.definition].setdefault(record.dataId, record)
+
     def saveDataIds(self, dataIds: Iterable[DataCoordinate], *,
                     elements: Optional[Iterable[DimensionElement]] = None) -> None:
         """Export the dimension records associated with one or more data IDs.
