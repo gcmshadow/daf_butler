@@ -652,7 +652,7 @@ class Butler:
         Parameters
         ----------
         ref : `DatasetRef`
-            Reference to an already stored dataset.
+            Resolved reference to an already stored dataset.
         parameters : `dict`
             Additional StorageClass-defined options to control reading,
             typically used to efficiently read only a subset of the dataset.
@@ -664,12 +664,44 @@ class Butler:
         """
         return self.datastore.get(ref, parameters=parameters)
 
+    def getDirectDeferred(self, ref: DatasetRef, *,
+                          parameters: Union[dict, None] = None) -> DeferredDatasetHandle:
+        """Create a `DeferredDatasetHandle` which can later retrieve a dataset,
+        from a resolved `DatasetRef`.
+
+        Parameters
+        ----------
+        ref : `DatasetRef`
+            Resolved reference to an already stored dataset.
+        parameters : `dict`
+            Additional StorageClass-defined options to control reading,
+            typically used to efficiently read only a subset of the dataset.
+
+        Returns
+        -------
+        obj : `DeferredDatasetHandle`
+            A handle which can be used to retrieve a dataset at a later time.
+
+        Raises
+        ------
+        LookupError
+            Raised if no matching dataset exists in the `Registry` (and
+            ``allowUnresolved is False``).
+        ValueError
+            Raised if a resolved `DatasetRef` was passed as an input, but it
+            differs from the one found in the registry.
+        TypeError
+            Raised if no collections were provided.
+        """
+        return DeferredDatasetHandle(butler=self, ref=ref, parameters=parameters)
+
     def getDeferred(self, datasetRefOrType: Union[DatasetRef, DatasetType, str],
                     dataId: Optional[DataId] = None, *,
                     parameters: Union[dict, None] = None,
                     collections: Any = None,
                     **kwds: Any) -> DeferredDatasetHandle:
-        """Create a `DeferredDatasetHandle` which can later retrieve a dataset
+        """Create a `DeferredDatasetHandle` which can later retrieve a dataset,
+        after an immediate registry lookup.
 
         Parameters
         ----------
