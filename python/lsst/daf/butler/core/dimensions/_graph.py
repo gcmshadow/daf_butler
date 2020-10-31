@@ -23,11 +23,13 @@ from __future__ import annotations
 
 __all__ = ["DimensionGraph"]
 
+import hashlib
 import itertools
 from types import MappingProxyType
 from typing import (
     AbstractSet,
     Any,
+    ClassVar,
     Dict,
     Iterable,
     Iterator,
@@ -269,6 +271,24 @@ class DimensionGraph:
             index = self.universe.getDimensionIndex(dimension.name)
             mask |= (1 << index)
         return mask.to_bytes(self.universe.getEncodeLength(), byteorder="big")
+
+    DIGEST_SIZE: ClassVar[int] = 64
+    """String size of the hexidecimal hashes returned by `digest`.
+    """
+
+    def digest(self) -> str:
+        """Compute a secure hash of this DimensionGraph, suitable for use as a
+        unique ID for it.
+
+        Returns
+        -------
+        digest : `str`
+            Secure hash of ``self``, in hexadecimal.
+        """
+        hasher = hashlib.blake2b(digest_size=self.DIGEST_SIZE)
+        for name in self.required.names:
+            hasher.update(name.encode("ascii"))
+        return hasher.hexdigest()
 
     def isdisjoint(self, other: DimensionGraph) -> bool:
         """Test whether the intersection of two graphs is empty.
