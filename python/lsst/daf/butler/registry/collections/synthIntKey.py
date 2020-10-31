@@ -38,6 +38,7 @@ from ._base import (
     DefaultCollectionManager,
     makeRunTableSpec,
     makeCollectionChainTableSpec,
+    makeSummaryTableSpec,
 )
 from ...core import TimespanDatabaseRepresentation, ddl
 from ..interfaces import CollectionRecord, VersionTuple
@@ -66,6 +67,7 @@ def _makeTableSpecs(tsRepr: Type[TimespanDatabaseRepresentation]) -> CollectionT
         ),
         run=makeRunTableSpec("collection_id", sqlalchemy.BigInteger, tsRepr),
         collection_chain=makeCollectionChainTableSpec("collection_id", sqlalchemy.BigInteger),
+        collection_summary=makeSummaryTableSpec("collection_id", sqlalchemy.BigInteger),
     )
 
 

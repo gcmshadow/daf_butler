@@ -25,6 +25,8 @@ from lsst.daf.butler import (
 )
 from lsst.daf.butler.registry import ConflictingDefinitionError
 from lsst.daf.butler.registry.interfaces import DatasetRecordStorage
+from lsst.daf.butler.registry.wildcards import CollectionContentRestriction
+
 
 if TYPE_CHECKING:
     from ...interfaces import CollectionManager, CollectionRecord, Database, RunRecord
@@ -57,15 +59,24 @@ class ByDimensionsDatasetRecordStorage(DatasetRecordStorage):
 
     def insert(self, run: RunRecord, dataIds: Iterable[DataCoordinate]) -> Iterator[DatasetRef]:
         # Docstring inherited from DatasetRecordStorage.
-        staticRow = {
-            "dataset_type_id": self._dataset_type_id,
-            self._runKeyColumn: run.key,
+        # Iterate over data IDs, transforming a possibly-single-pass iterable
+        # into a list, and remembering any governor dimension values we see.
+        governorValues: Dict[str, Set[str]] = {
+            name: set() for name in self.datasetType.dimensions.governors.names
         }
-        dataIds = list(dataIds)
-        # Insert into the static dataset table, generating autoincrement
-        # dataset_id values.
+        dataIdList = []
+        for dataId in dataIds:
+            dataIdList.append(dataId)
+            for governorName, values in governorValues.items():
+                values.add(dataId[governorName])  # type: ignore
         with self._db.transaction():
-            datasetIds = self._db.insert(self._static.dataset, *([staticRow]*len(dataIds)),
+            # Insert into the static dataset table, generating autoincrement
+            # dataset_id values.
+            staticRow = {
+                "dataset_type_id": self._dataset_type_id,
+                self._runKeyColumn: run.key,
+            }
+            datasetIds = self._db.insert(self._static.dataset, *([staticRow]*len(dataIdList)),
                                          returnIds=True)
             assert datasetIds is not None
             # Combine the generated dataset_id values and data ID fields to
@@ -76,12 +87,23 @@ class ByDimensionsDatasetRecordStorage(DatasetRecordStorage):
             }
             tagsRows = [
                 dict(protoTagsRow, dataset_id=dataset_id, **dataId.byName())
-                for dataId, dataset_id in zip(dataIds, datasetIds)
+                for dataId, dataset_id in zip(dataIdList, datasetIds)
             ]
             # Insert those rows into the tags table.  This is where we'll
             # get any unique constraint violations.
             self._db.insert(self._tags, *tagsRows)
-        for dataId, datasetId in zip(dataIds, datasetIds):
+            # Update the summary table for this collection in case this is the
+            # first time this dataset type or these governor values have been
+            # inserted there.
+            self._collections.updateRestriction(
+                run.key,
+                CollectionContentRestriction.fromExpression(
+                    self.datasetType.name,
+                    universe=self.datasetType.dimensions.universe,
+                    **governorValues,
+                )
+            )
+        for dataId, datasetId in zip(dataIdList, datasetIds):
             yield DatasetRef(
                 datasetType=self.datasetType,
                 dataId=dataId,
@@ -145,12 +167,25 @@ class ByDimensionsDatasetRecordStorage(DatasetRecordStorage):
             "dataset_type_id": self._dataset_type_id,
         }
         rows = []
+        governorValues: Dict[str, Set[str]] = {
+            name: set() for name in self.datasetType.dimensions.governors.names
+        }
         for dataset in datasets:
             row = dict(protoRow, dataset_id=dataset.getCheckedId())
             for dimension, value in dataset.dataId.items():
                 row[dimension.name] = value
+            for governorName, values in governorValues.items():
+                values.add(dataset.dataId[governorName])  # type: ignore
             rows.append(row)
         self._db.replace(self._tags, *rows)
+        self._collections.updateRestriction(
+            collection.key,
+            CollectionContentRestriction.fromExpression(
+                self.datasetType.name,
+                universe=self.datasetType.dimensions.universe,
+                **governorValues,
+            )
+        )
 
     def disassociate(self, collection: CollectionRecord, datasets: Iterable[DatasetRef]) -> None:
         # Docstring inherited from DatasetRecordStorage.
@@ -206,12 +241,17 @@ class ByDimensionsDatasetRecordStorage(DatasetRecordStorage):
             "dataset_type_id": self._dataset_type_id,
         }
         rows = []
+        governorValues: Dict[str, Set[str]] = {
+            name: set() for name in self.datasetType.dimensions.governors.names
+        }
         dataIds: Optional[Set[DataCoordinate]] = set() if not tsRepr.hasExclusionConstraint() else None
         for dataset in datasets:
             row = dict(protoRow, dataset_id=dataset.getCheckedId())
             for dimension, value in dataset.dataId.items():
                 row[dimension.name] = value
             tsRepr.update(timespan, result=row)
+            for governorName, values in governorValues.items():
+                values.add(dataset.dataId[governorName])  # type: ignore
             rows.append(row)
             if dataIds is not None:
                 dataIds.add(dataset.dataId)
@@ -251,6 +291,14 @@ class ByDimensionsDatasetRecordStorage(DatasetRecordStorage):
                     )
                 # Proceed with the insert.
                 self._db.insert(self._calibs, *rows)
+        self._collections.updateRestriction(
+            collection.key,
+            CollectionContentRestriction.fromExpression(
+                self.datasetType.name,
+                universe=self.datasetType.dimensions.universe,
+                **governorValues,
+            )
+        )
 
     def decertify(self, collection: CollectionRecord, timespan: Timespan, *,
                   dataIds: Optional[Iterable[DataCoordinate]] = None) -> None:

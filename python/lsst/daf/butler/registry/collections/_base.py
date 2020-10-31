@@ -50,7 +50,10 @@ from ..interfaces import (
     MissingCollectionError,
     RunRecord,
 )
-from ..wildcards import CollectionContentRestriction, CollectionSearch
+from ..wildcards import (
+    CollectionContentRestriction,
+    CollectionSearch,
+)
 
 if TYPE_CHECKING:
     from ..interfaces import Database, DimensionRecordStorageManager
@@ -84,7 +87,15 @@ def _makeCollectionForeignKey(sourceColumnName: str, collectionIdName: str,
                               **kwargs)
 
 
-CollectionTablesTuple = namedtuple("CollectionTablesTuple", ["collection", "run", "collection_chain"])
+CollectionTablesTuple = namedtuple(
+    "CollectionTablesTuple",
+    [
+        "collection",
+        "run",
+        "collection_chain",
+        "collection_summary",
+    ]
+)
 
 
 def makeRunTableSpec(collectionIdName: str, collectionIdType: type,
@@ -161,6 +172,36 @@ def makeCollectionChainTableSpec(collectionIdName: str, collectionIdType: type) 
         foreignKeys=[
             _makeCollectionForeignKey("parent", collectionIdName, onDelete="CASCADE"),
             _makeCollectionForeignKey("child", collectionIdName),
+        ],
+    )
+
+
+def makeSummaryTableSpec(collectionIdName: str, collectionIdType: type) -> ddl.TableSpec:
+    """Define a specification for the "collection_summary" table.
+
+    Parameters
+    ----------
+    Parameters
+    ----------
+    collectionIdName : `str`
+        Name of the column in collections table that identifies it (PK).
+    collectionIdType
+        Type of the PK column in the collections table, one of the
+        `sqlalchemy` types.
+
+    Returns
+    -------
+    spec : `ddl.TableSpec`
+        Specification for collection summary table.
+    """
+    return ddl.TableSpec(
+        fields=[
+            ddl.FieldSpec(f"collection", dtype=collectionIdType, primaryKey=True),
+            ddl.FieldSpec("summary_key", dtype=sqlalchemy.String, length=128, nullable=False),
+            ddl.FieldSpec("summary_value", dtype=sqlalchemy.String, length=128, nullable=False),
+        ],
+        foreignKeys=[
+            _makeCollectionForeignKey(f"collection", collectionIdName, onDelete="CASCADE"),
         ],
     )
 
@@ -466,6 +507,12 @@ class DefaultCollectionManager(Generic[K], CollectionManager):
 
     def __iter__(self) -> Iterator[CollectionRecord]:
         yield from self._records.values()
+
+    def updateRestriction(self, key: Any, restriction: CollectionContentRestriction) -> None:
+        # Docstring inherited from CollectionManager.
+        rows = [{"collection": key, "summary_key": pair_key, "summary_value": pair_value}
+                for pair_key, pair_value in restriction.toPairs()]
+        self._db.ensure(self._tables.collection_summary, *rows)
 
     def _setRecordCache(self, records: Iterable[CollectionRecord]) -> None:
         """Set internal record cache to contain given records,

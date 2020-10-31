@@ -37,7 +37,7 @@ from typing import (
 )
 
 from ...core import ddl, DimensionUniverse, Timespan
-from ..wildcards import CollectionSearch
+from ..wildcards import CollectionContentRestriction, CollectionSearch
 from .._collectionType import CollectionType
 from ._versioning import VersionedExtension
 
@@ -524,5 +524,27 @@ class CollectionManager(VersionedExtension):
         ------
         record : `CollectionRecord`
             The record for a managed collection.
+        """
+        raise NotImplementedError()
+
+    @abstractmethod
+    def updateRestriction(self, key: Any, restriction: CollectionContentRestriction) -> None:
+        """Notify the collection manager that new dataset types and/or
+        governor dimension values have been associated with a collection.
+
+        This must be called whenever datasets are inserted into a collection,
+        as this summary of the collection's contents may be used to restrict
+        queries of it.
+
+        Parameter
+        ---------
+        key
+            Implementation-defined primary key value for the collection.  May
+            not reference a `~CollectionType.CHAINED` collection.
+        restriction : `CollectionContentRestriction`
+            Object containing the dataset types and/or governor dimension
+            values whose associated datasets have been added to the collection.
+            These will be combined with any dataset types or governor values
+            already associated with the collection.
         """
         raise NotImplementedError()
