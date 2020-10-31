@@ -33,7 +33,7 @@ from typing import AbstractSet, Iterable, Optional, TYPE_CHECKING
 
 import sqlalchemy
 
-from ...core import DatabaseDimensionElement, GovernorDimension, SkyPixDimension
+from ...core import DatabaseDimensionElement, DimensionGraph, GovernorDimension, SkyPixDimension
 from ._versioning import VersionedExtension
 
 if TYPE_CHECKING:
@@ -454,6 +454,40 @@ class DimensionRecordStorageManager(VersionedExtension):
         TransactionInterruption
             Raised if this operation is invoked within a `Database.transaction`
             context.
+        """
+        raise NotImplementedError()
+
+    @abstractmethod
+    def saveDimensionGraph(self, graph: DimensionGraph) -> str:
+        """Save a `DimensionGraph` definition to the database, allowing it to
+        be retrieved later via its `~DimensionGraph.digest`.
+
+        Parameters
+        ----------
+        graph : `DimensionGraph`
+            Set of dimensions to save.
+
+        Returns
+        -------
+        digest : `str`
+            Hex digest of the `DimensionGraph` used as its key in the database.
+        """
+        raise NotImplementedError()
+
+    @abstractmethod
+    def loadDimensionGraph(self, digest: str) -> DimensionGraph:
+        """Retrieve a `DimensionGraph` that was previously saved in the
+        database.
+
+        Parameters
+        ----------
+        digest : `str`
+            Hex digest of the graph, used as its key.
+
+        Returns
+        -------
+        graph : `DimensionGraph`
+            Retrieved graph.
         """
         raise NotImplementedError()
 
