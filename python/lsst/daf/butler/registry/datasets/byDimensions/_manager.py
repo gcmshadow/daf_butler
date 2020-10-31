@@ -18,7 +18,6 @@ from lsst.daf.butler import (
     DatasetRef,
     DatasetType,
     ddl,
-    DimensionGraph,
     DimensionUniverse,
 )
 from lsst.daf.butler.registry import ConflictingDefinitionError, OrphanedRecordError
@@ -124,7 +123,7 @@ class ByDimensionsDatasetRecordStorageManager(DatasetRecordStorageManager):
         c = self._static.dataset_type.columns
         for row in self._db.query(self._static.dataset_type.select()).fetchall():
             name = row[c.name]
-            dimensions = DimensionGraph.decode(row[c.dimensions_encoded], universe=universe)
+            dimensions = self._dimensions.loadDimensionGraph(row[c.dimensions_digest])
             calibTableName = row[c.calibration_association_table]
             datasetType = DatasetType(name, dimensions, row[c.storage_class],
                                       isCalibration=(calibTableName is not None))
@@ -182,11 +181,12 @@ class ByDimensionsDatasetRecordStorageManager(DatasetRecordStorageManager):
         if storage is None:
             tagTableName = makeTagTableName(datasetType)
             calibTableName = makeCalibTableName(datasetType) if datasetType.isCalibration() else None
+            dimensionsDigest = self._dimensions.saveDimensionGraph(datasetType.dimensions)
             row, inserted = self._db.sync(
                 self._static.dataset_type,
                 keys={"name": datasetType.name},
                 compared={
-                    "dimensions_encoded": datasetType.dimensions.encode(),
+                    "dimensions_digest": dimensionsDigest,
                     "storage_class": datasetType.storageClass.name,
                 },
                 extra={

@@ -272,7 +272,7 @@ class DimensionGraph:
             mask |= (1 << index)
         return mask.to_bytes(self.universe.getEncodeLength(), byteorder="big")
 
-    DIGEST_SIZE: ClassVar[int] = 64
+    DIGEST_SIZE: ClassVar[int] = 32
     """String size of the hexidecimal hashes returned by `digest`.
     """
 
@@ -285,7 +285,7 @@ class DimensionGraph:
         digest : `str`
             Secure hash of ``self``, in hexadecimal.
         """
-        hasher = hashlib.blake2b(digest_size=self.DIGEST_SIZE)
+        hasher = hashlib.blake2b(digest_size=self.DIGEST_SIZE//2)
         for name in self.required.names:
             hasher.update(name.encode("ascii"))
         return hasher.hexdigest()

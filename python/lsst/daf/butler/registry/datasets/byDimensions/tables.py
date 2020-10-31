@@ -46,6 +46,7 @@ import sqlalchemy
 from lsst.daf.butler import (
     DatasetType,
     ddl,
+    DimensionGraph,
     DimensionUniverse,
 )
 from lsst.daf.butler import addDimensionForeignKey, TimespanDatabaseRepresentation
@@ -163,13 +164,14 @@ def makeStaticTableSpecs(collections: Type[CollectionManager],
                     )
                 ),
                 ddl.FieldSpec(
-                    name="dimensions_encoded",
-                    dtype=ddl.Base64Bytes,
-                    nbytes=universe.getEncodeLength(),
+                    name="dimensions_digest",
+                    dtype=sqlalchemy.String,
+                    length=DimensionGraph.DIGEST_SIZE,
                     nullable=False,
                     doc=(
-                        "An opaque (but reversible) encoding of the set of "
-                        "dimensions used to identify dataset of this type."
+                        "A digest of the set of dimensions used to define "
+                        "this dataset, and a key into the table that holds "
+                        "those definitions in the database."
                     ),
                 ),
                 ddl.FieldSpec(
@@ -249,7 +251,7 @@ def makeTagTableName(datasetType: DatasetType) -> str:
     name : `str`
         Name for the table.
     """
-    return f"dataset_tags_{datasetType.dimensions.encode().hex()}"
+    return f"dataset_tags_{datasetType.dimensions.digest()}"
 
 
 def makeCalibTableName(datasetType: DatasetType) -> str:
@@ -268,7 +270,7 @@ def makeCalibTableName(datasetType: DatasetType) -> str:
         Name for the table.
     """
     assert datasetType.isCalibration()
-    return f"dataset_calibs_{datasetType.dimensions.encode().hex()}"
+    return f"dataset_calibs_{datasetType.dimensions.digest()}"
 
 
 def makeTagTableSpec(datasetType: DatasetType, collections: Type[CollectionManager]) -> ddl.TableSpec:
