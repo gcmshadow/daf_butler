@@ -542,7 +542,8 @@ class CollectionContentRestriction:
         self.dimensions = dimensions
 
     @classmethod
-    def fromExpression(cls, expression: Any, universe: DimensionUniverse) -> CollectionContentRestriction:
+    def fromExpression(cls, expression: Any, universe: DimensionUniverse,
+                       **kwargs: Union[str, Iterable[str], EllipsisType]) -> CollectionContentRestriction:
         """Construct a new restriction instance from an expression.
 
         Parameters
@@ -553,11 +554,14 @@ class CollectionContentRestriction:
             `DatasetTypeRestriction.fromExpression`.
         universe : `DimensionUniverse`
             Object managing all known dimensions.
+        kwargs : `str` or `Iterable` [ `str` ]
+            Governor dimension values to restrict to, keyed by dimension name.
         """
         if isinstance(expression, cls):
             return expression
         return cls(
             datasetTypes=DatasetTypeRestriction.fromExpression(expression),
+            dimensions=GovernorDimensionRestriction(universe, **kwargs),
             universe=universe,
         )
 
