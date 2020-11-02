@@ -305,6 +305,16 @@ class SimpleButlerTestCase(unittest.TestCase):
                                   collections="calibs")
         self.assertEqual(bias3b_id, bias3b.id)
 
+        # Do it again but using the record information
+        bias2a_id, _ = butler.get("bias", {"instrument": "Cam1", "exposure.obs_id": "three",
+                                           "detector.full_name": "Ab"},
+                                  collections="calibs")
+        self.assertEqual(bias2a_id, bias2a.id)
+        bias3b_id, _ = butler.get("bias", {"instrument": "Cam1", "exposure.obs_id": "four",
+                                           "detector.full_name": "Ba"},
+                                  collections="calibs")
+        self.assertEqual(bias3b_id, bias3b.id)
+
 
 if __name__ == "__main__":
     unittest.main()
