@@ -892,6 +892,25 @@ class ButlerTests(ButlerPutGetTests):
             for testStr in self.datastoreName:
                 self.assertIn(testStr, datastoreName)
 
+    def testIngestTimeQuery(self):
+        storageClass = self.storageClassFactory.getStorageClass("StructuredDataNoComponents")
+        butler = self.runPutGetTest(storageClass, "test_metric")
+
+        datasets = list(butler.registry.queryDatasets(..., collections=...))
+        len0 = len(datasets)
+        self.assertGreater(len0, 0)
+
+        where = "ingest_date > T'2000-01-01'"
+        datasets = list(butler.registry.queryDatasets(..., collections=..., where=where))
+        len1 = len(datasets)
+        self.assertEqual(len0, len1)
+
+        # no one will ever use this piece of software in 30 years
+        where = "ingest_date > T'2050-01-01'"
+        datasets = list(butler.registry.queryDatasets(..., collections=..., where=where))
+        len2 = len(datasets)
+        self.assertEqual(len2, 0)
+
 
 class FileLikeDatastoreButlerTests(ButlerTests):
     """Common tests and specialization of ButlerTests for butlers backed
