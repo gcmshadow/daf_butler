@@ -137,6 +137,8 @@ class CompositesMap:
                 matchName = key
                 break
 
+        assert isinstance(disassemble, bool)
+
         log.debug("%s will%s be disassembled", matchName, "" if disassemble else " not")
         return disassemble
 

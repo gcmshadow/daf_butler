@@ -52,6 +52,7 @@ from typing import (
     Set,
     TextIO,
     Tuple,
+    Type,
     Union,
 )
 
@@ -386,7 +387,7 @@ class Butler:
             del config["root"]
 
         full = ButlerConfig(config, searchPaths=searchPaths)  # this applies defaults
-        datastoreClass = doImport(full["datastore", "cls"])
+        datastoreClass: Type[Datastore] = doImport(full["datastore", "cls"])
         datastoreClass.setConfigRoot(BUTLER_ROOT_TAG, config, full, overwrite=forceConfigRoot)
 
         # if key exists in given config, parse it, otherwise parse the defaults
