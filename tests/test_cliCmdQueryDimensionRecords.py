@@ -51,7 +51,8 @@ class QueryDimensionRecordsTest(unittest.TestCase, ButlerTestHelper):
                            "zenith_angle", "region", "timespan [2]")
 
     def setUp(self):
-        self.root = tempfile.mkdtemp(dir=TESTDIR)
+        base = os.environ.get("LSST_DAF_BUTLER_TEST_TMP", TESTDIR)
+        self.root = tempfile.mkdtemp(dir=base)
         self.testRepo = MetricTestRepo(self.root,
                                        configFile=os.path.join(TESTDIR, "config/basic/butler.yaml"))
         self.runner = LogCliRunner()

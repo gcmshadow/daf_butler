@@ -40,7 +40,8 @@ class AstropyTableFormatterTestCase(unittest.TestCase):
     """
 
     def setUp(self):
-        self.root = tempfile.mkdtemp(dir=TESTDIR)
+        base = os.environ.get("LSST_DAF_BUTLER_TEST_TMP", TESTDIR)
+        self.root = tempfile.mkdtemp(dir=base)
         Butler.makeRepo(self.root)
         ints = [1, 2, 3]
         names = ['one', 'two', 'three']

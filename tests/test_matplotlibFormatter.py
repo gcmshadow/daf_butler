@@ -49,7 +49,8 @@ class MatplotlibFormatterTestCase(unittest.TestCase):
     RANDOM_SEED = 10
 
     def setUp(self):
-        self.root = tempfile.mkdtemp(dir=TESTDIR)
+        base = os.environ.get("LSST_DAF_BUTLER_TEST_TMP", TESTDIR)
+        self.root = tempfile.mkdtemp(dir=base)
         Butler.makeRepo(self.root)
         # Create a random image for testing
         self.rng = Random(self.RANDOM_SEED)

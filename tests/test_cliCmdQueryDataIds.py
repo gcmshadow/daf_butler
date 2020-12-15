@@ -52,7 +52,8 @@ class QueryDataIdsTest(unittest.TestCase, ButlerTestHelper):
                                    where=where)
 
     def setUp(self):
-        self.root = tempfile.mkdtemp(dir=TESTDIR)
+        base = os.environ.get("LSST_DAF_BUTLER_TEST_TMP", TESTDIR)
+        self.root = tempfile.mkdtemp(dir=base)
         self.repo = MetricTestRepo(root=self.root,
                                    configFile=os.path.join(TESTDIR, "config/basic/butler.yaml"))
 

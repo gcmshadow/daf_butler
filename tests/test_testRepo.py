@@ -41,7 +41,8 @@ class ButlerUtilsTestSuite(unittest.TestCase):
     def setUpClass(cls):
         # Repository should be re-created for each test case, but
         # this has a prohibitive run-time cost at present
-        cls.root = tempfile.mkdtemp(dir=TESTDIR)
+        base = os.environ.get("LSST_DAF_BUTLER_TEST_TMP", TESTDIR)
+        cls.root = tempfile.mkdtemp(dir=base)
 
         dataIds = {
             "instrument": ["notACam", "dummyCam"],
@@ -69,7 +70,8 @@ class ButlerUtilsTestSuite(unittest.TestCase):
 
     def testButlerKwargs(self):
         # outfile has the most obvious effects of any Butler.makeRepo keyword
-        temp = tempfile.mkdtemp(dir=TESTDIR)
+        base = os.environ.get("LSST_DAF_BUTLER_TEST_TMP", TESTDIR)
+        temp = tempfile.mkdtemp(dir=base)
         try:
             path = os.path.join(temp, 'oddConfig.json')
             makeTestRepo(temp, {}, outfile=path)
@@ -130,7 +132,8 @@ class ButlerUtilsTestSuite(unittest.TestCase):
         """Regression test for registerMetricsExample having no effect
         on ChainedDatastore.
         """
-        temp = tempfile.mkdtemp(dir=TESTDIR)
+        base = os.environ.get("LSST_DAF_BUTLER_TEST_TMP", TESTDIR)
+        temp = tempfile.mkdtemp(dir=base)
         try:
             config = lsst.daf.butler.Config()
             config["datastore", "cls"] = "lsst.daf.butler.datastores.chainedDatastore.ChainedDatastore"

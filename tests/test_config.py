@@ -29,6 +29,8 @@ import tempfile
 
 from lsst.daf.butler import ConfigSubset, Config
 
+TESTDIR = os.path.abspath(os.path.dirname(__file__))
+
 
 @contextlib.contextmanager
 def modified_environment(**environ):
@@ -634,7 +636,8 @@ resource:
 class FileWriteConfigTestCase(unittest.TestCase):
 
     def setUp(self):
-        self.tmpdir = tempfile.mkdtemp()
+        base = os.environ.get("LSST_DAF_BUTLER_TEST_TMP", TESTDIR)
+        self.tmpdir = tempfile.mkdtemp(dir=base)
 
     def tearDown(self):
         if os.path.exists(self.tmpdir):

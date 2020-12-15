@@ -22,6 +22,7 @@
 """Tests for Butler.
 """
 
+from contextlib import contextmanager
 import os
 import posixpath
 import unittest
@@ -108,6 +109,17 @@ class ButlerConfigTests(unittest.TestCase):
         key = ("datastore", "records", "table")
         self.assertNotEqual(config1[key], config2[key])
         self.assertEqual(config2[key], "override_record")
+
+
+@contextmanager
+def safeTempDir():
+    base = os.environ.get("LSST_DAF_BUTLER_TEST_TMP", TESTDIR)
+    root = tempfile.mkdtemp(dir=base)
+    try:
+        yield root
+    finally:
+        if root is not None and os.path.exists(root):
+            shutil.rmtree(root, ignore_errors=True)
 
 
 class ButlerPutGetTests:
@@ -413,7 +425,8 @@ class ButlerTests(ButlerPutGetTests):
 
     def setUp(self):
         """Create a new butler root for each test."""
-        self.root = tempfile.mkdtemp(dir=TESTDIR)
+        base = os.environ.get("LSST_DAF_BUTLER_TEST_TMP", TESTDIR)
+        self.root = tempfile.mkdtemp(dir=base)
         Butler.makeRepo(self.root, config=Config(self.configFile))
         self.tmpConfigFile = os.path.join(self.root, "butler.yaml")
 
@@ -984,7 +997,7 @@ class FileDatastoreButlerTests(ButlerTests):
         skymapRecord = {"name": "example_skymap", "hash": (50).to_bytes(8, byteorder="little")}
         exportButler.registry.insertDimensionData("skymap", skymapRecord)
         # Export and then import datasets.
-        with tempfile.TemporaryDirectory() as exportDir:
+        with safeTempDir() as exportDir:
             exportFile = os.path.join(exportDir, "exports.yaml")
             with exportButler.export(filename=exportFile, directory=exportDir, transfer="auto") as export:
                 export.saveDatasets(datasets)
@@ -999,7 +1012,7 @@ class FileDatastoreButlerTests(ButlerTests):
                 # Save some dimension records directly.
                 export.saveDimensionData("skymap", [skymapRecord])
             self.assertTrue(os.path.exists(exportFile))
-            with tempfile.TemporaryDirectory() as importDir:
+            with safeTempDir() as importDir:
                 # We always want this to be a local posix butler
                 Butler.makeRepo(importDir, config=Config(os.path.join(TESTDIR, "config/basic/butler.yaml")))
                 # Calling script.butlerImport tests the implementation of the
@@ -1046,7 +1059,7 @@ class PosixDatastoreButlerTestCase(FileDatastoreButlerTests, unittest.TestCase):
                             f"Checking path {path}")
 
         for transfer in ("copy", "link", "symlink", "relsymlink"):
-            with tempfile.TemporaryDirectory(dir=TESTDIR) as exportDir:
+            with safeTempDir() as exportDir:
                 with exportButler.export(directory=exportDir, format="yaml",
                                          transfer=transfer) as export:
                     export.saveDatasets(datasets)
@@ -1089,7 +1102,8 @@ class ButlerExplicitRootTestCase(PosixDatastoreButlerTestCase):
     fullConfigKey = None
 
     def setUp(self):
-        self.root = tempfile.mkdtemp(dir=TESTDIR)
+        base = os.environ.get("LSST_DAF_BUTLER_TEST_TMP", TESTDIR)
+        self.root = tempfile.mkdtemp(dir=base)
 
         # Make a new repository in one place
         self.dir1 = os.path.join(self.root, "dir1")
@@ -1119,8 +1133,9 @@ class ButlerMakeRepoOutfileTestCase(ButlerPutGetTests, unittest.TestCase):
     configFile = os.path.join(TESTDIR, "config/basic/butler.yaml")
 
     def setUp(self):
-        self.root = tempfile.mkdtemp(dir=TESTDIR)
-        self.root2 = tempfile.mkdtemp(dir=TESTDIR)
+        base = os.environ.get("LSST_DAF_BUTLER_TEST_TMP", TESTDIR)
+        self.root = tempfile.mkdtemp(dir=base)
+        self.root2 = tempfile.mkdtemp(dir=base)
 
         self.tmpConfigFile = os.path.join(self.root2, "different.yaml")
         Butler.makeRepo(self.root, config=Config(self.configFile),
@@ -1149,8 +1164,9 @@ class ButlerMakeRepoOutfileDirTestCase(ButlerMakeRepoOutfileTestCase):
     configFile = os.path.join(TESTDIR, "config/basic/butler.yaml")
 
     def setUp(self):
-        self.root = tempfile.mkdtemp(dir=TESTDIR)
-        self.root2 = tempfile.mkdtemp(dir=TESTDIR)
+        base = os.environ.get("LSST_DAF_BUTLER_TEST_TMP", TESTDIR)
+        self.root = tempfile.mkdtemp(dir=base)
+        self.root2 = tempfile.mkdtemp(dir=base)
 
         self.tmpConfigFile = self.root2
         Butler.makeRepo(self.root, config=Config(self.configFile),
@@ -1169,8 +1185,9 @@ class ButlerMakeRepoOutfileUriTestCase(ButlerMakeRepoOutfileTestCase):
     configFile = os.path.join(TESTDIR, "config/basic/butler.yaml")
 
     def setUp(self):
-        self.root = tempfile.mkdtemp(dir=TESTDIR)
-        self.root2 = tempfile.mkdtemp(dir=TESTDIR)
+        base = os.environ.get("LSST_DAF_BUTLER_TEST_TMP", TESTDIR)
+        self.root = tempfile.mkdtemp(dir=base)
+        self.root2 = tempfile.mkdtemp(dir=base)
 
         self.tmpConfigFile = ButlerURI(os.path.join(self.root2, "something.yaml")).geturl()
         Butler.makeRepo(self.root, config=Config(self.configFile),
@@ -1235,7 +1252,8 @@ class S3DatastoreButlerTestCase(FileDatastoreButlerTests, unittest.TestCase):
         config.update({"datastore": {"datastore": {"root": rooturi}}})
 
         # need local folder to store registry database
-        self.reg_dir = tempfile.mkdtemp(dir=TESTDIR)
+        base = os.environ.get("LSST_DAF_BUTLER_TEST_TMP", TESTDIR)
+        self.reg_dir = tempfile.mkdtemp(dir=base)
         config["registry", "db"] = f"sqlite:///{self.reg_dir}/gen3.sqlite3"
 
         # MOTO needs to know that we expect Bucket bucketname to exist
@@ -1367,7 +1385,8 @@ class WebdavDatastoreButlerTestCase(FileDatastoreButlerTests, unittest.TestCase)
         config.update({"datastore": {"datastore": {"root": self.rooturi}}})
 
         # need local folder to store registry database
-        self.reg_dir = tempfile.mkdtemp(dir=TESTDIR)
+        base = os.environ.get("LSST_DAF_BUTLER_TEST_TMP", TESTDIR)
+        self.reg_dir = tempfile.mkdtemp(dir=base)
         config["registry", "db"] = f"sqlite:///{self.reg_dir}/gen3.sqlite3"
 
         self.datastoreStr = f"datastore={self.root}"

@@ -94,7 +94,8 @@ class PruneCollectionExecutionTest(unittest.TestCase, ButlerTestHelper):
     def setUp(self):
         self.runner = LogCliRunner()
 
-        self.root = tempfile.mkdtemp(dir=TESTDIR)
+        base = os.environ.get("LSST_DAF_BUTLER_TEST_TMP", TESTDIR)
+        self.root = tempfile.mkdtemp(dir=base)
         self.testRepo = MetricTestRepo(self.root,
                                        configFile=os.path.join(TESTDIR, "config/basic/butler.yaml"))
 

@@ -49,7 +49,8 @@ class ParquetFormatterTestCase(unittest.TestCase):
 
     def setUp(self):
         """Create a new butler root for each test."""
-        self.root = tempfile.mkdtemp(dir=TESTDIR)
+        base = os.environ.get("LSST_DAF_BUTLER_TEST_TMP", TESTDIR)
+        self.root = tempfile.mkdtemp(dir=base)
         Butler.makeRepo(self.root)
         self.butler = Butler(self.root, run="test_run")
         # No dimensions in dataset type so we don't have to worry about

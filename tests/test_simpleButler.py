@@ -55,7 +55,8 @@ class SimpleButlerTestCase(unittest.TestCase):
     """
 
     def setUp(self):
-        self.root = tempfile.mkdtemp()
+        base = os.environ.get("LSST_DAF_BUTLER_TEST_TMP", TESTDIR)
+        self.root = tempfile.mkdtemp(dir=base)
 
     def tearDown(self):
         if self.root is not None and os.path.exists(self.root):

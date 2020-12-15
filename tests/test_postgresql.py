@@ -23,6 +23,8 @@ import os
 from contextlib import contextmanager
 import itertools
 import secrets
+import shutil
+import tempfile
 import unittest
 import gc
 
@@ -43,12 +45,14 @@ from lsst.daf.butler.registry import Registry
 from lsst.daf.butler.registry.databases.postgresql import PostgresqlDatabase, _RangeTimespanType
 from lsst.daf.butler.registry.tests import DatabaseTests, RegistryTests
 
+TESTDIR = os.path.abspath(os.path.dirname(__file__))
 
-def _startServer():
+
+def _startServer(root):
     """Start a PostgreSQL server and create a database within it, returning
     an object encapsulating both.
     """
-    server = testing.postgresql.Postgresql()
+    server = testing.postgresql.Postgresql(base_dir=root)
     engine = sqlalchemy.engine.create_engine(server.url())
     engine.execute("CREATE EXTENSION btree_gist;")
     return server
@@ -59,7 +63,9 @@ class PostgresqlDatabaseTestCase(unittest.TestCase, DatabaseTests):
 
     @classmethod
     def setUpClass(cls):
-        cls.server = _startServer()
+        base = os.environ.get("LSST_DAF_BUTLER_TEST_TMP", TESTDIR)
+        cls.root = tempfile.mkdtemp(dir=base)
+        cls.server = _startServer(cls.root)
 
     @classmethod
     def tearDownClass(cls):
@@ -67,6 +73,8 @@ class PostgresqlDatabaseTestCase(unittest.TestCase, DatabaseTests):
         # so they're closed before we shut down the server.
         gc.collect()
         cls.server.stop()
+        if cls.root is not None and os.path.exists(cls.root):
+            shutil.rmtree(cls.root, ignore_errors=True)
 
     def makeEmptyDatabase(self, origin: int = 0) -> PostgresqlDatabase:
         namespace = f"namespace_{secrets.token_hex(8).lower()}"
@@ -205,11 +213,18 @@ class PostgresqlRegistryTests(RegistryTests):
 
     @classmethod
     def setUpClass(cls):
-        cls.server = _startServer()
+        base = os.environ.get("LSST_DAF_BUTLER_TEST_TMP", TESTDIR)
+        cls.root = tempfile.mkdtemp(dir=base)
+        cls.server = _startServer(cls.root)
 
     @classmethod
     def tearDownClass(cls):
+        # Clean up any lingering SQLAlchemy engines/connections
+        # so they're closed before we shut down the server.
+        gc.collect()
         cls.server.stop()
+        if cls.root is not None and os.path.exists(cls.root):
+            shutil.rmtree(cls.root, ignore_errors=True)
 
     @classmethod
     def getDataDir(cls) -> str:

@@ -51,7 +51,8 @@ class FileURITestCase(unittest.TestCase):
     def setUp(self):
         # Use a local tempdir because on macOS the temp dirs use symlinks
         # so relsymlink gets quite confused.
-        self.tmpdir = tempfile.mkdtemp(dir=TESTDIR)
+        base = os.environ.get("LSST_DAF_BUTLER_TEST_TMP", TESTDIR)
+        self.tmpdir = tempfile.mkdtemp(dir=base)
 
     def tearDown(self):
         shutil.rmtree(self.tmpdir, ignore_errors=True)
@@ -267,7 +268,8 @@ class S3URITestCase(unittest.TestCase):
 
     def setUp(self):
         # Local test directory
-        self.tmpdir = tempfile.mkdtemp()
+        base = os.environ.get("LSST_DAF_BUTLER_TEST_TMP", TESTDIR)
+        self.tmpdir = tempfile.mkdtemp(dir=base)
 
         # set up some fake credentials if they do not exist
         self.usingDummyCredentials = setAwsEnvCredentials()
